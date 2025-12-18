@@ -52,7 +52,7 @@ ddd-framework/
 ### 1. 安装依赖
 
 ```bash
-pip install sqlalchemy pydantic-settings dependency-injector
+uv pip install sqlalchemy pydantic-settings dependency-injector
 ```
 
 ### 2. 运行示例

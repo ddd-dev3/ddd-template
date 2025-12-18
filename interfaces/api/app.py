@@ -31,13 +31,15 @@ DDDApp - DDD 框架的 API 入口
     app.run()
 """
 
-from typing import Optional, Callable
+from typing import Optional, Callable, Set
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastmcp import FastMCP
 
 from infrastructure.containers.bootstrap import bootstrap, Bootstrap
+from infrastructure.config.settings import get_settings
+from interfaces.api.middleware.api_key_middleware import APIKeyMiddleware
 
 
 class DDDApp:
@@ -53,11 +55,15 @@ class DDDApp:
         description: str = "",
         version: str = "1.0.0",
         mcp_path: str = "/mcp",
+        enable_api_key_auth: bool = True,
+        api_key_whitelist_paths: Optional[Set[str]] = None,
     ):
         self.title = title
         self.description = description
         self.version = version
         self.mcp_path = mcp_path
+        self.enable_api_key_auth = enable_api_key_auth
+        self.api_key_whitelist_paths = api_key_whitelist_paths
 
         # 初始化 Bootstrap（DDD 容器）
         self._bootstrap: Optional[Bootstrap] = None
@@ -112,8 +118,17 @@ class DDDApp:
             lifespan=lifespan,
         )
 
-        # 挂载 MCP
-        app.mount("/tools", mcp_app)
+        # 添加 API Key 认证中间件（保护所有路由包括 /tools）
+        if self.enable_api_key_auth:
+            settings = get_settings()
+            app.add_middleware(
+                APIKeyMiddleware,
+                api_key=settings.api_key,
+                whitelist_paths=self.api_key_whitelist_paths,
+            )
+
+        # 挂载 MCP（在中间件之后，受保护）
+        app.mount(self.mcp_path, mcp_app)
 
         return app
 

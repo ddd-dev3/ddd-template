@@ -4,7 +4,6 @@
 使用 pydantic-settings 管理环境变量和配置
 """
 
-import os
 from typing import Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -36,9 +35,35 @@ class Settings(BaseSettings):
     prod_db_pool_size: int = 20
     prod_db_max_overflow: int = 40
 
+    # ========== API 认证配置 ==========
+    api_key: str = "dev-api-key-change-me"  # 开发环境默认值，生产环境必须通过环境变量设置
+
+    # ========== 加密配置 ==========
+    # Fernet 密钥（32 字节 base64 编码）
+    # 生成方式: from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())
+    encryption_key: str = "your-32-byte-base64-encoded-key-here"  # 必须通过环境变量设置
+
     # ========== 日志配置 ==========
     log_level: str = "INFO"
     log_file: str = "logs/app.log"
+
+    # ========== 邮件轮询配置 ==========
+    # 环境变量: MAIL_POLLING_INTERVAL
+    mail_polling_interval: float = 5.0  # 邮件轮询间隔（秒）
+    # 环境变量: MAIL_MAX_CONCURRENT_CONNECTIONS
+    mail_max_concurrent_connections: int = 10  # 最大并发 IMAP 连接数
+    # 环境变量: MAIL_POLL_TIMEOUT
+    mail_poll_timeout: float = 30.0  # 单邮箱轮询超时（秒）
+
+    # ========== AI 配置 ==========
+    # 环境变量: OPENAI_API_KEY
+    openai_api_key: str = ""  # 必须通过环境变量设置，不记录到日志
+    # 环境变量: OPENAI_API_BASE
+    openai_api_base: str = "https://api.openai.com/v1"
+    # 环境变量: OPENAI_MODEL
+    openai_model: str = "gpt-4o-mini"
+    # 环境变量: AI_EXTRACTION_TIMEOUT
+    ai_extraction_timeout: float = 30.0  # AI 提取超时（秒）
 
     model_config = SettingsConfigDict(
         env_file=".env",

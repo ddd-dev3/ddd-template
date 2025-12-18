@@ -166,7 +166,7 @@ class DomainEventException(DomainException):
 
 class SpecificationNotSatisfiedException(DomainException):
     """规约不满足异常"""
-    
+
     def __init__(self, specification: str, entity: Any):
         self.specification = specification
         self.entity = entity
@@ -174,3 +174,56 @@ class SpecificationNotSatisfiedException(DomainException):
             message=f"Entity does not satisfy specification '{specification}'",
             code="SPECIFICATION_NOT_SATISFIED"
         )
+
+
+# ========== 认证异常 ==========
+
+class AuthenticationException(DomainException):
+    """认证异常基类"""
+    pass
+
+
+class InvalidApiKeyException(AuthenticationException):
+    """无效 API Key 异常"""
+
+    def __init__(self, message: str = "Invalid API Key"):
+        super().__init__(
+            message=message,
+            code="INVALID_API_KEY"
+        )
+
+
+class MissingApiKeyException(AuthenticationException):
+    """缺少 API Key 异常"""
+
+    def __init__(self, message: str = "API Key required"):
+        super().__init__(
+            message=message,
+            code="MISSING_API_KEY"
+        )
+
+
+# ========== IMAP 异常 ==========
+
+class ImapConnectionException(DomainException):
+    """IMAP 连接异常"""
+
+    def __init__(self, message: str, server: str = "", port: int = 0):
+        self.server = server
+        self.port = port
+        super().__init__(
+            message=message,
+            code="IMAP_CONNECTION_ERROR"
+        )
+
+
+class ImapAuthenticationException(ImapConnectionException):
+    """IMAP 认证失败异常"""
+
+    def __init__(self, message: str = "IMAP authentication failed", server: str = "", port: int = 0):
+        super().__init__(
+            message=message,
+            server=server,
+            port=port
+        )
+        self.code = "IMAP_AUTH_ERROR"

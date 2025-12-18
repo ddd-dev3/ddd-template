@@ -7,10 +7,15 @@
 
 from dependency_injector import containers, providers
 from sqlalchemy import Engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 
 from infrastructure.database.database_factory import DatabaseFactory
 from infrastructure.database.unit_of_work import UnitOfWork
+from infrastructure.mailbox.services.imap_connection_validator_impl import ImapConnectionValidatorImpl
+from infrastructure.mailbox.repositories.sqlalchemy_mailbox_account_repository import SqlAlchemyMailboxAccountRepository
+from infrastructure.mail.services.imap_mail_fetch_service_impl import ImapMailFetchServiceImpl
+from infrastructure.mail.repositories.sqlalchemy_email_repository import SqlAlchemyEmailRepository
+from infrastructure.ai.llm_verification_extractor import LlmVerificationExtractor
 from .config import ConfigContainer
 
 
@@ -41,12 +46,56 @@ class InfraContainer(containers.DeclarativeContainer):
         session_factory=db_session_factory
     )
 
-    # ============ 仓储（后续添加）============
-    # 示例：
-    # user_repository = providers.Factory(
-    #     SqlAlchemyUserRepository,
-    #     session_factory=db_session_factory
-    # )
+    # ============ 数据库 Session ============
+
+    # 数据库 Session（每次请求新实例）
+    db_session = providers.Factory(
+        lambda session_factory: session_factory(),
+        session_factory=db_session_factory
+    )
+
+    # ============ 仓储 ============
+
+    # 邮箱账号仓储
+    mailbox_account_repository = providers.Factory(
+        SqlAlchemyMailboxAccountRepository,
+        session=db_session
+    )
+
+    # ============ 领域服务 ============
+
+    # IMAP 连接验证服务
+    imap_connection_validator = providers.Singleton(
+        ImapConnectionValidatorImpl,
+        timeout=30.0
+    )
+
+    # ============ 邮件仓储 ============
+
+    # 邮件仓储
+    email_repository = providers.Factory(
+        SqlAlchemyEmailRepository,
+        session=db_session
+    )
+
+    # ============ 邮件服务 ============
+
+    # IMAP 邮件收取服务
+    imap_mail_fetch_service = providers.Factory(
+        ImapMailFetchServiceImpl,
+        encryption_key=config.provided.settings.provided.encryption_key,
+    )
+
+    # ============ AI 服务 ============
+
+    # LLM 验证码提取服务（单例）
+    llm_verification_extractor = providers.Singleton(
+        LlmVerificationExtractor,
+        api_key=config.provided.settings.provided.openai_api_key,
+        model=config.provided.settings.provided.openai_model,
+        api_base=config.provided.settings.provided.openai_api_base,
+        timeout=config.provided.settings.provided.ai_extraction_timeout,
+    )
 
     # ============ 外部服务（后续添加）============
     # 示例：

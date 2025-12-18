@@ -51,6 +51,7 @@ class Bootstrap(containers.DeclarativeContainer):
     # ============ 应用层 ============
     app = providers.Container(
         AppContainer,
+        config=config,  # 注入配置容器
         infra=infra  # 注入基础设施容器
     )
 
