@@ -92,7 +92,7 @@ class InfraContainer(containers.DeclarativeContainer):
     # IMAP 邮件收取服务
     imap_mail_fetch_service = providers.Factory(
         ImapMailFetchServiceImpl,
-        encryption_key=config.provided.settings.provided.encryption_key,
+        encryption_key=config.settings.provided.encryption_key,
     )
 
     # ============ AI 服务 ============
@@ -100,11 +100,11 @@ class InfraContainer(containers.DeclarativeContainer):
     # LLM 验证码提取服务（单例）
     llm_verification_extractor = providers.Singleton(
         LlmVerificationExtractor,
-        api_key=config.provided.settings.provided.openai_api_key,
-        model=config.provided.settings.provided.openai_model,
-        api_base=config.provided.settings.provided.openai_api_base,
-        timeout=config.provided.settings.provided.ai_extraction_timeout,
-        max_tokens=config.provided.settings.provided.ai_max_tokens,
+        api_key=config.settings.provided.openai_api_key,
+        model=config.settings.provided.openai_model,
+        api_base=config.settings.provided.openai_api_base,
+        timeout=config.settings.provided.ai_extraction_timeout,
+        max_tokens=config.settings.provided.ai_max_tokens,
     )
 
     # ============ 外部服务（后续添加）============
