@@ -7,9 +7,9 @@ API Key 认证中间件
 import secrets
 from typing import Set, Optional
 
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import JSONResponse
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware  # FastAPI 未重新导出此类
 
 
 def mask_api_key(api_key: str | None) -> str:
