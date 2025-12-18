@@ -111,9 +111,17 @@ class DDDApp:
             # 初始化数据库（自动创建表）
             engine = self._bootstrap.infra.db_engine()
             init_database(engine)
+
+            # 启动邮件轮询服务
+            polling_service = self._bootstrap.app.mail_polling_service()
+            await polling_service.start()
+
             # 使用 MCP 的 lifespan
             async with mcp_app.lifespan(app):
                 yield
+
+            # 停止邮件轮询服务
+            await polling_service.stop()
 
         app = FastAPI(
             title=self.title,
