@@ -13,7 +13,18 @@ API 文档：
 
 from interfaces.api import DDDApp
 from interfaces.api.routes import accounts_router, code_router, register_router
-from infrastructure.containers.application import wire_handlers
+
+# 导入 handler getter 设置函数
+from interfaces.api.routes.accounts import (
+    set_handler_getter as set_add_handler,
+    set_list_handler_getter,
+    set_delete_handler_getter,
+)
+from interfaces.api.routes.register import (
+    set_register_handler_getter,
+    set_cancel_handler_getter,
+)
+from interfaces.api.routes.code import set_get_code_handler_getter
 
 # 创建 DDDApp
 ddd_app = DDDApp(
@@ -24,8 +35,19 @@ ddd_app = DDDApp(
     api_key_whitelist_paths={"/docs", "/openapi.json", "/redoc"},
 )
 
-# 注册 Handlers 到 Mediator（关键！）
-wire_handlers(ddd_app.bootstrap.app)
+# 获取 DI 容器
+container = ddd_app.bootstrap.app
+
+# 注册 Handler Getters（关键！连接 DI 容器到路由）
+# 邮箱账号 handlers
+set_add_handler(container.add_mailbox_account_handler)
+set_list_handler_getter(container.list_mailbox_accounts_handler)
+set_delete_handler_getter(container.delete_mailbox_account_handler)
+
+# 验证请求 handlers
+set_register_handler_getter(container.register_wait_request_handler)
+set_cancel_handler_getter(container.cancel_wait_request_handler)
+set_get_code_handler_getter(container.get_code_handler)
 
 # 注册路由
 ddd_app.fastapi.include_router(accounts_router, prefix="/api/v1", tags=["邮箱账号"])
