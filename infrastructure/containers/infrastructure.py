@@ -104,6 +104,7 @@ class InfraContainer(containers.DeclarativeContainer):
         model=config.provided.settings.provided.openai_model,
         api_base=config.provided.settings.provided.openai_api_base,
         timeout=config.provided.settings.provided.ai_extraction_timeout,
+        max_tokens=config.provided.settings.provided.ai_max_tokens,
     )
 
     # ============ 外部服务（后续添加）============

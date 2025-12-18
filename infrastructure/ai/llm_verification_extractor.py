@@ -133,6 +133,8 @@ class LlmVerificationExtractor:
 2. 验证码只返回最可能的一个
 3. 链接只返回最可能的验证链接"""
 
+    DEFAULT_MAX_TOKENS = 1024
+
     def __init__(
         self,
         api_key: str,
@@ -140,6 +142,7 @@ class LlmVerificationExtractor:
         api_base: str = DEFAULT_API_BASE,
         timeout: float = DEFAULT_TIMEOUT,
         max_retries: int = DEFAULT_MAX_RETRIES,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
         logger: Optional[logging.Logger] = None,
     ):
         """
@@ -151,6 +154,7 @@ class LlmVerificationExtractor:
             api_base: API 地址，默认 OpenAI 官方地址
             timeout: API 调用超时时间（秒）
             max_retries: 最大重试次数，默认 3 次
+            max_tokens: 最大生成 token 数，默认 1024
             logger: 日志记录器
 
         Raises:
@@ -168,9 +172,11 @@ class LlmVerificationExtractor:
         self._api_base = api_base
         self._timeout = timeout
         self._max_retries = max_retries
+        self._max_tokens = max_tokens
         self._logger = logger or logging.getLogger(__name__)
 
         # 初始化 LangChain ChatOpenAI
+        # 使用 extra_body 确保 max_tokens 被发送（某些 API 网关需要）
         self._llm = ChatOpenAI(
             api_key=api_key,
             model=model,
@@ -178,6 +184,7 @@ class LlmVerificationExtractor:
             temperature=0,  # 确定性输出
             timeout=timeout,
             max_retries=max_retries,
+            extra_body={"max_tokens": max_tokens},
         )
 
     def extract_code(self, content: str) -> ExtractionResult:

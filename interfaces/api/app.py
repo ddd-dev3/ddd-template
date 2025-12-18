@@ -39,6 +39,7 @@ from fastmcp import FastMCP
 
 from infrastructure.containers.bootstrap import bootstrap, Bootstrap
 from infrastructure.config.settings import get_settings
+from infrastructure.database.database_factory import init_database
 from interfaces.api.middleware.api_key_middleware import APIKeyMiddleware
 
 
@@ -107,6 +108,9 @@ class DDDApp:
         async def lifespan(app: FastAPI):
             # 初始化 Bootstrap
             self._bootstrap = bootstrap()
+            # 初始化数据库（自动创建表）
+            engine = self._bootstrap.infra.db_engine()
+            init_database(engine)
             # 使用 MCP 的 lifespan
             async with mcp_app.lifespan(app):
                 yield

@@ -64,6 +64,8 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     # 环境变量: AI_EXTRACTION_TIMEOUT
     ai_extraction_timeout: float = 30.0  # AI 提取超时（秒）
+    # 环境变量: AI_MAX_TOKENS
+    ai_max_tokens: int = 1024  # 最大生成 token 数（Claude 模型需要）
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -34,15 +34,13 @@ ddd-framework/
 │   │   ├── database_factory.py  # ⭐ 数据库工厂（多环境自动切换）
 │   │   └── unit_of_work.py      # 工作单元模式
 │   ├── config/                  # 配置
-│   │   ├── .env.example         # 环境变量示例
 │   │   └── settings.py          # 配置类
 │   └── containers/              # 依赖注入容器
 │       └── app_containers.py    # ⭐ 应用容器
 │
 ├── common/                      # 🔧 通用工具（跨层使用）
 │   └── logging/                 # 日志模块
-│
-└── examples/                    # 📚 示例
+
 ```
 
 ---
@@ -52,14 +50,7 @@ ddd-framework/
 ### 1. 安装依赖
 
 ```bash
-uv pip install sqlalchemy pydantic-settings dependency-injector
-```
-
-### 2. 运行示例
-
-```bash
-cd ddd-framework
-python examples/basic_usage.py
+uv sync
 ```
 
 ---
@@ -137,7 +128,7 @@ export LOG_BACKEND=loguru  # 手动覆盖
 
 ```bash
 # Logfire 需要认证（仅首次）
-pip install logfire
+uv add logfire
 logfire auth
 ```
 

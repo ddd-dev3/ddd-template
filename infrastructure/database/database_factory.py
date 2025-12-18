@@ -216,3 +216,27 @@ def get_session(env: Optional[Environment] = None) -> Session:
     """便捷函数：创建 Session"""
     engine = get_engine(env)
     return DatabaseFactory.create_session(engine)
+
+
+def init_database(engine: Optional[Engine] = None) -> None:
+    """
+    初始化数据库（创建所有表）
+
+    在应用启动时调用，自动创建所有已注册的表。
+    如果表已存在则跳过。
+
+    Args:
+        engine: SQLAlchemy Engine，如果不传则自动创建
+    """
+    if engine is None:
+        engine = get_engine()
+
+    # 导入所有模型，确保它们注册到 Base.metadata
+    from infrastructure.mailbox.models.mailbox_account_model import Base
+    # 以下导入确保模型被注册（即使不直接使用）
+    from infrastructure.mailbox.models.mailbox_account_model import MailboxAccountModel  # noqa: F401
+    from infrastructure.mail.models.email_model import EmailModel  # noqa: F401
+    from infrastructure.verification.models.wait_request_model import WaitRequestModel  # noqa: F401
+
+    # 创建所有表（如果不存在）
+    Base.metadata.create_all(bind=engine)
