@@ -16,6 +16,7 @@ from infrastructure.mailbox.repositories.sqlalchemy_mailbox_account_repository i
 from infrastructure.mail.services.imap_mail_fetch_service_impl import ImapMailFetchServiceImpl
 from infrastructure.mail.repositories.sqlalchemy_email_repository import SqlAlchemyEmailRepository
 from infrastructure.ai.llm_verification_extractor import LlmVerificationExtractor
+from infrastructure.verification.repositories.sqlalchemy_wait_request_repository import SqlAlchemyWaitRequestRepository
 from .config import ConfigContainer
 
 
@@ -75,6 +76,14 @@ class InfraContainer(containers.DeclarativeContainer):
     # 邮件仓储
     email_repository = providers.Factory(
         SqlAlchemyEmailRepository,
+        session=db_session
+    )
+
+    # ============ 验证仓储 ============
+
+    # 等待请求仓储
+    wait_request_repository = providers.Factory(
+        SqlAlchemyWaitRequestRepository,
         session=db_session
     )
 

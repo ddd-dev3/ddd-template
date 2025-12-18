@@ -29,6 +29,13 @@ from application.mail.services.async_mail_polling_service import AsyncMailPollin
 # 导入 AI 应用服务
 from application.ai.services.ai_extraction_service import AiExtractionService
 
+# 导入验证 Handlers
+from application.commands.verification import (
+    RegisterWaitRequestHandler,
+    CancelWaitRequestHandler,
+)
+from application.handlers.verification import GetCodeHandler
+
 if TYPE_CHECKING:
     from .infrastructure import InfraContainer
 
@@ -73,6 +80,27 @@ class AppContainer(containers.DeclarativeContainer):
     list_mailbox_accounts_handler = providers.Factory(
         ListMailboxAccountsHandler,
         repository=infra.mailbox_account_repository,
+    )
+
+    # ============ 验证处理器 ============
+    # 注册等待请求 Handler
+    register_wait_request_handler = providers.Factory(
+        RegisterWaitRequestHandler,
+        mailbox_repo=infra.mailbox_account_repository,
+        wait_request_repo=infra.wait_request_repository,
+    )
+
+    # 取消等待请求 Handler
+    cancel_wait_request_handler = providers.Factory(
+        CancelWaitRequestHandler,
+        wait_request_repo=infra.wait_request_repository,
+        mailbox_repo=infra.mailbox_account_repository,
+    )
+
+    # 查询验证码 Handler
+    get_code_handler = providers.Factory(
+        GetCodeHandler,
+        wait_request_repo=infra.wait_request_repository,
     )
 
     # ============ 应用服务 ============
@@ -128,3 +156,8 @@ def wire_handlers(container: AppContainer) -> None:
     factory.register_handler(AddMailboxAccountHandler, container.add_mailbox_account_handler)
     factory.register_handler(ListMailboxAccountsHandler, container.list_mailbox_accounts_handler)
     factory.register_handler(DeleteMailboxAccountHandler, container.delete_mailbox_account_handler)
+
+    # 注册验证 Handlers
+    factory.register_handler(RegisterWaitRequestHandler, container.register_wait_request_handler)
+    factory.register_handler(CancelWaitRequestHandler, container.cancel_wait_request_handler)
+    factory.register_handler(GetCodeHandler, container.get_code_handler)

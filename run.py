@@ -13,6 +13,7 @@ API 文档：
 
 from interfaces.api import DDDApp
 from interfaces.api.routes import accounts_router, code_router, register_router
+from infrastructure.containers.application import wire_handlers
 
 # 创建 DDDApp
 ddd_app = DDDApp(
@@ -22,6 +23,9 @@ ddd_app = DDDApp(
     enable_api_key_auth=True,
     api_key_whitelist_paths={"/docs", "/openapi.json", "/redoc"},
 )
+
+# 注册 Handlers 到 Mediator（关键！）
+wire_handlers(ddd_app.bootstrap.app)
 
 # 注册路由
 ddd_app.fastapi.include_router(accounts_router, prefix="/api/v1", tags=["邮箱账号"])
