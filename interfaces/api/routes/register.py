@@ -11,6 +11,11 @@ from application.commands.verification.register_wait_request import (
     RegisterWaitRequestHandler,
     RegisterWaitRequestResult,
 )
+from application.commands.verification.cancel_wait_request import (
+    CancelWaitRequestCommand,
+    CancelWaitRequestHandler,
+    CancelWaitRequestResult,
+)
 
 
 router = APIRouter(tags=["Verification"])
@@ -34,6 +39,24 @@ def get_register_handler() -> Optional[RegisterWaitRequestHandler]:
     if _register_handler_getter is None:
         return None
     return _register_handler_getter()
+
+
+_cancel_handler_getter: Optional[Callable[[], CancelWaitRequestHandler]] = None
+
+
+def set_cancel_handler_getter(
+    getter: Callable[[], CancelWaitRequestHandler]
+) -> None:
+    """设置 cancel handler 获取器（由 DI 容器调用）"""
+    global _cancel_handler_getter
+    _cancel_handler_getter = getter
+
+
+def get_cancel_handler() -> Optional[CancelWaitRequestHandler]:
+    """获取 CancelWaitRequestHandler 实例"""
+    if _cancel_handler_getter is None:
+        return None
+    return _cancel_handler_getter()
 
 
 # ============ Request/Response DTOs ============
@@ -96,6 +119,18 @@ class ErrorResponseDTO(BaseModel):
 
     detail: str = Field(..., description="错误详情")
     error_code: Optional[str] = Field(default=None, description="错误代码")
+
+
+class CancelWaitResponseDTO(BaseModel):
+    """取消等待响应 DTO
+
+    Attributes:
+        request_id: 被取消的等待请求 ID
+        message: 结果消息
+    """
+
+    request_id: UUID = Field(..., description="等待请求 ID")
+    message: str = Field(..., description="结果消息")
 
 
 # ============ 错误码映射 ============
@@ -178,5 +213,71 @@ def register_wait_request(
     # 返回成功响应
     return RegisterWaitResponseDTO(
         request_id=result.request_id,
+        message=result.message,
+    )
+
+
+@router.delete(
+    "/register/{request_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=CancelWaitResponseDTO,
+    responses={
+        400: {"model": ErrorResponseDTO, "description": "请求已不可取消"},
+        404: {"model": ErrorResponseDTO, "description": "请求不存在"},
+    },
+    summary="取消等待请求",
+    description="""
+    取消等待中的请求，释放邮箱资源。
+
+    **流程：**
+    1. 根据 request_id 查找等待请求
+    2. 检查请求是否处于 PENDING 状态
+    3. 取消请求
+    4. 释放邮箱占用状态
+
+    **注意：**
+    - 只有 PENDING 状态的请求可以被取消
+    - 已完成、已取消或已失败的请求无法再次取消
+    - 取消后邮箱自动释放，可被其他服务使用
+    """,
+)
+def cancel_wait_request(
+    request_id: UUID,
+    handler: Optional[CancelWaitRequestHandler] = Depends(get_cancel_handler),
+) -> CancelWaitResponseDTO:
+    """
+    取消等待请求
+
+    - 取消等待中的请求
+    - 释放邮箱资源
+    """
+    if handler is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Handler not configured. Please configure dependency injection.",
+        )
+
+    # 创建命令
+    command = CancelWaitRequestCommand(request_id=request_id)
+
+    # 执行命令
+    result: CancelWaitRequestResult = handler.handle(command)
+
+    # 处理结果
+    if result.error_code == "NOT_FOUND":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Request not found",
+        )
+
+    if result.error_code == "ALREADY_TERMINAL":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Request cannot be cancelled, current status: {result.current_status}",
+        )
+
+    # 返回成功响应
+    return CancelWaitResponseDTO(
+        request_id=request_id,
         message=result.message,
     )

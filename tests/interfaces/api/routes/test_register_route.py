@@ -10,12 +10,18 @@ from fastapi.testclient import TestClient
 from interfaces.api.routes.register import (
     router,
     set_register_handler_getter,
+    set_cancel_handler_getter,
     RegisterWaitRequestDTO,
     RegisterWaitResponseDTO,
+    CancelWaitResponseDTO,
 )
 from application.commands.verification.register_wait_request import (
     RegisterWaitRequestHandler,
     RegisterWaitRequestResult,
+)
+from application.commands.verification.cancel_wait_request import (
+    CancelWaitRequestHandler,
+    CancelWaitRequestResult,
 )
 
 
@@ -270,3 +276,168 @@ class TestRegisterWaitResponseDTO:
 
         assert dto.request_id == request_id
         assert dto.message == "Wait request created successfully"
+
+
+# ============ Cancel Wait Request Route Tests ============
+
+
+@pytest.fixture
+def mock_cancel_handler():
+    """创建 mock cancel handler"""
+    return Mock(spec=CancelWaitRequestHandler)
+
+
+@pytest.fixture
+def setup_cancel_handler(mock_cancel_handler):
+    """设置 cancel handler getter"""
+    set_cancel_handler_getter(lambda: mock_cancel_handler)
+    yield
+    set_cancel_handler_getter(None)
+
+
+class TestCancelWaitRequestRoute:
+    """DELETE /register/{request_id} 路由测试"""
+
+    def test_cancel_success(self, client, mock_cancel_handler, setup_cancel_handler):
+        """测试成功取消等待请求 (AC1)"""
+        # 设置 mock 返回成功结果
+        request_id = uuid4()
+        mock_cancel_handler.handle.return_value = CancelWaitRequestResult(
+            success=True,
+            message="Wait request cancelled successfully",
+        )
+
+        # 发送请求
+        response = client.delete(f"/register/{request_id}")
+
+        # 验证响应
+        assert response.status_code == 200
+        data = response.json()
+        assert data["request_id"] == str(request_id)
+        assert data["message"] == "Wait request cancelled successfully"
+
+        # 验证 handler 被调用
+        mock_cancel_handler.handle.assert_called_once()
+        command = mock_cancel_handler.handle.call_args[0][0]
+        assert command.request_id == request_id
+
+    def test_cancel_not_found(self, client, mock_cancel_handler, setup_cancel_handler):
+        """测试请求不存在返回 404 (AC3)"""
+        # 设置 mock 返回未找到结果
+        request_id = uuid4()
+        mock_cancel_handler.handle.return_value = CancelWaitRequestResult(
+            success=False,
+            message="Request not found",
+            error_code="NOT_FOUND",
+        )
+
+        # 发送请求
+        response = client.delete(f"/register/{request_id}")
+
+        # 验证响应
+        assert response.status_code == 404
+        data = response.json()
+        assert data["detail"] == "Request not found"
+
+    def test_cancel_already_completed(
+        self, client, mock_cancel_handler, setup_cancel_handler
+    ):
+        """测试取消已完成的请求返回 400 (AC2)"""
+        # 设置 mock 返回已终止结果
+        request_id = uuid4()
+        mock_cancel_handler.handle.return_value = CancelWaitRequestResult(
+            success=False,
+            message="Request cannot be cancelled",
+            error_code="ALREADY_TERMINAL",
+            current_status="completed",
+        )
+
+        # 发送请求
+        response = client.delete(f"/register/{request_id}")
+
+        # 验证响应
+        assert response.status_code == 400
+        data = response.json()
+        assert "cannot be cancelled" in data["detail"]
+        assert "completed" in data["detail"]
+
+    def test_cancel_already_cancelled(
+        self, client, mock_cancel_handler, setup_cancel_handler
+    ):
+        """测试取消已取消的请求返回 400 (AC2)"""
+        # 设置 mock 返回已终止结果
+        request_id = uuid4()
+        mock_cancel_handler.handle.return_value = CancelWaitRequestResult(
+            success=False,
+            message="Request cannot be cancelled",
+            error_code="ALREADY_TERMINAL",
+            current_status="cancelled",
+        )
+
+        # 发送请求
+        response = client.delete(f"/register/{request_id}")
+
+        # 验证响应
+        assert response.status_code == 400
+        data = response.json()
+        assert "cannot be cancelled" in data["detail"]
+        assert "cancelled" in data["detail"]
+
+    def test_cancel_already_failed(
+        self, client, mock_cancel_handler, setup_cancel_handler
+    ):
+        """测试取消已失败的请求返回 400 (AC2)"""
+        # 设置 mock 返回已终止结果
+        request_id = uuid4()
+        mock_cancel_handler.handle.return_value = CancelWaitRequestResult(
+            success=False,
+            message="Request cannot be cancelled",
+            error_code="ALREADY_TERMINAL",
+            current_status="failed",
+        )
+
+        # 发送请求
+        response = client.delete(f"/register/{request_id}")
+
+        # 验证响应
+        assert response.status_code == 400
+        data = response.json()
+        assert "cannot be cancelled" in data["detail"]
+        assert "failed" in data["detail"]
+
+    def test_cancel_handler_not_configured(self, client):
+        """测试 handler 未配置返回 500"""
+        # 确保没有设置 handler
+        set_cancel_handler_getter(None)
+
+        # 发送请求
+        request_id = uuid4()
+        response = client.delete(f"/register/{request_id}")
+
+        # 验证响应
+        assert response.status_code == 500
+        data = response.json()
+        assert "Handler not configured" in data["detail"]
+
+    def test_cancel_invalid_uuid(self, client, mock_cancel_handler, setup_cancel_handler):
+        """测试无效 UUID 返回 422"""
+        # 发送无效 UUID 请求
+        response = client.delete("/register/not-a-valid-uuid")
+
+        # 验证响应
+        assert response.status_code == 422
+
+
+class TestCancelWaitResponseDTO:
+    """CancelWaitResponseDTO 测试"""
+
+    def test_valid_response_dto(self):
+        """测试有效的响应 DTO"""
+        request_id = uuid4()
+        dto = CancelWaitResponseDTO(
+            request_id=request_id,
+            message="Wait request cancelled successfully",
+        )
+
+        assert dto.request_id == request_id
+        assert dto.message == "Wait request cancelled successfully"
